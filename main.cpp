@@ -115,19 +115,6 @@ static Game_Object Game_RandomBackgroundPoint()
     return {glm::vec2((float)SDL_rand(m_WindowWidth) - m_WindowHeight / 2, (float)SDL_rand(m_WindowHeight) + (m_WindowHeight / 2) + Game_CameraOffset.y), glm::vec2(0, 0), Game_RandomColor(true), {0, (SDL_rand(9) + 1.0f) / 20}, Game_VoidFunction};
 }
 
-// static void Game_SetText(TTF_Text *text, const char *content)
-// {
-//     TTF_DestroyText(text);
-//     text = TTF_CreateText(Game_TextEngine, font, content, strlen(content));
-// }
-
-static void Game_SetText(TTF_Text *text, std::string content)
-{
-    // char *content = _content.c_str();
-    TTF_DestroyText(text);
-    text = TTF_CreateText(Game_TextEngine, font, content.c_str(), content.length());
-}
-
 /**
  * Init
  */
@@ -149,7 +136,7 @@ static void Game_InitBackgroundPoints()
 
 static bool Game_InitText()
 {
-    font = TTF_OpenFont("assets/fonts/VonwaonBitmap.ttf", 24);
+    font = TTF_OpenFont("assets/fonts/VonwaonBitmap.ttf", 16);
 
     if (font == NULL)
     {
@@ -158,6 +145,10 @@ static bool Game_InitText()
     SDL_Log("Font loaded");
 
     Game_TextEngine = TTF_CreateRendererTextEngine(renderer);
+    if (Game_TextEngine == NULL)
+    {
+        return false;
+    }
 
     return true;
 }
@@ -197,7 +188,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     SDL_Log("Game start");
 
-    Game_SetText(Game_TextHeight, std::string("EMMMM"));
+    std::string _tip = std::string("Press Mouse to start");
+    Game_TextHeight = TTF_CreateText(Game_TextEngine, font, _tip.c_str(), _tip.length());
 
     m_LastFrameTime = SDL_GetPerformanceCounter();
 
@@ -223,7 +215,8 @@ static void Game_LimitFPS()
 
 static void Game_UpdateTextHeight()
 {
-    Game_SetText(Game_TextHeight, fmt::format("Height: {}m", Game_Ball.y));
+    std::string str = fmt::format("Height: {}m", Game_Ball.y / 10);
+    Game_TextHeight = TTF_CreateText(Game_TextEngine, font, str.c_str(), str.length());
 }
 
 static void Game_UpdateBall()
@@ -317,7 +310,7 @@ static void Game_RenderBackground()
 static void Game_RenderTextHeight()
 {
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-    TTF_DrawRendererText(Game_TextHeight, 32, 32);
+    TTF_DrawRendererText(Game_TextHeight, 16, 8);
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
@@ -328,7 +321,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     }
     else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
     {
-        SDL_LogInfo(0, "Button Down");
         Game_Ball.yVelocity = 200;
     }
     return SDL_APP_CONTINUE;
