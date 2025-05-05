@@ -10,19 +10,23 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/build/out)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/build/out)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/release/${CMAKE_SYSTEM_NAME})
 
-set(TARGET ${PROJECT_NAME}-${CMAKE_SYSTEM_NAME})
+set(TARGET ${PROJECT_NAME}-${PROJECT_VERSION})
+
+set(PARENT_DIR ${CMAKE_SOURCE_DIR})
 
 find_package(SDL3 REQUIRED)
 # find_package(SDL3_image REQUIRED)
-# find_package(SDL3_ttf REQUIRED)
+find_package(SDL3_ttf REQUIRED)
+find_package(fmt REQUIRED)
 
 add_executable(${TARGET} main.cpp)
 
 target_link_libraries(${TARGET}
                         ${SDL3_LIBRARIES}
                         # SDL3_image::SDL3_image
-                        # SDL3_ttf::SDL3_ttf
+                        SDL3_ttf::SDL3_ttf
+                        fmt::fmt
                     )
