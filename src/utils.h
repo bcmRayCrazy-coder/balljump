@@ -14,5 +14,7 @@ COLOR Game_RandomColor(bool withAny);
 void Game_SetText(TTF_Text *text, std::string content);
 void Game_DrawCross(SDL_Renderer *renderer, glm::vec2 center, int length, glm::vec3 color, float alpha);
 void Game_DrawCircle(SDL_Renderer *renderer, glm::vec2 center, int radius, glm::vec3 color, float alpha);
+Game_Object Game_CreateRandomBackgroundPoint(bool withOffset);
+Game_BarrierBendObject *Game_CreateBarrierBendLine(float y, float speed);
 
 #endif

@@ -21,31 +21,9 @@ static TTF_Text *Game_TextFPS = NULL;
 static SDL_Texture *Game_HintUpArrowTexture = NULL;
 
 // Game Object
-static Ball Game_Ball;
-
 static Game_Object Game_BackgroundPoints[MAX_NUM_BACKGROUND_POINT];
-static Game_Object Game_BarrierColorBend[MAX_NUM_BARRIER_BEND][32];
+static Game_BarrierBendObject Game_BarrierColorBend[MAX_NUM_BARRIER_BEND][32];
 // static Game_Object Game_BarrierColorCircle[MAX_NUM_BARRIER_CIRCLE][16] = {};
-
-/**
- * Create
- */
-static Game_Object Game_CreateRandomBackgroundPoint(bool withOffset = true)
-{
-    float y = (float)SDL_rand(m_WindowHeight);
-    if (withOffset)
-    {
-        y += (m_WindowHeight / 2) + Game_CameraOffset.y;
-    }
-    /**
-     * Point ExData
-     * { Parallex, brightness }
-     */
-    Game_Object object(glm::vec2((float)SDL_rand(m_WindowWidth) - m_WindowWidth / 2, y), Game_RandomColor(true));
-    object.exData[0] = SDL_rand(100) / 200.0f;
-    object.exData[1] = SDL_rand(255) / 255.0f;
-    return object;
-}
 
 /**
  * Init
@@ -124,6 +102,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     Game_InitBall();
     Game_InitBackgroundPoints();
     Game_InitTexture();
+
+    Game_BarrierBendObject *objList = Game_BarrierColorBend[0];
+    Game_BarrierBendObject *barrierList = Game_CreateBarrierBendLine(200, 50);
+    for (int i = 0; i < 32; i++)
+    {
+        *(objList + i) = *(barrierList + i);
+    }
 
     SDL_SetRenderLogicalPresentation(renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     SDL_Log("Game start");
@@ -207,10 +192,16 @@ static void Game_FrameBackground()
 
         Game_DrawCross(renderer, pointPosition, 2, pointColor, 255);
 
+#ifdef DEBUG_BACKGROUND
+        const glm::vec2 originPosition = Game_GetRenderPosition(point.position);
+        Game_DrawCross(renderer, originPosition, 1, pointColor, 255);
+        SDL_RenderLine(renderer, pointPosition.x, pointPosition.y, originPosition.x, originPosition.y);
+#endif
+
         // Respawm outbound point
         if (pointPosition.y > m_WindowHeight)
         {
-            Game_BackgroundPoints[i] = Game_CreateRandomBackgroundPoint();
+            Game_BackgroundPoints[i] = Game_CreateRandomBackgroundPoint(true);
         }
     }
 }
@@ -255,6 +246,43 @@ static void Game_FrameHintUpArrow()
     }
 }
 
+static void Game_FrameBendBarrier()
+{
+    // for (auto &objectList : Game_BarrierColorBend)
+    // {
+    //     if (objectList != NULL)
+    //     {
+    //         for (auto object : objectList)
+    //         {
+    //             if (object.color != COLOR::ANY)
+    //             {
+    //                 object.onFrame();
+    //             }
+    //         }
+    //     }
+    // }
+    for (int i = 0; i < 4; i++)
+    {
+        Game_BarrierBendObject *objList = Game_BarrierColorBend[i];
+        for (int j = 0; j < 32; j++)
+        {
+            Game_BarrierBendObject *object = objList + j;
+            if (object->color != COLOR::ANY)
+            {
+                object->onFrame();
+            }
+            // fmt::println("Addr: {} X: {}", fmt::ptr(object), object->position.x);
+            // std::cout << s.c_str() << std::endl;
+            // SDL_Log("%s", s.c_str());
+        }
+    }
+}
+
+static void Game_FrameBarrier()
+{
+    Game_FrameBendBarrier();
+}
+
 static void Game_FrameHUD()
 {
     Game_FrameTextHeight();
@@ -288,6 +316,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     Game_FrameCamera();
     Game_FrameBackground();
+    Game_FrameBarrier();
     Game_FrameBall();
     Game_FrameHUD();
 

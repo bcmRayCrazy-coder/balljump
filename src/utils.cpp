@@ -117,3 +117,54 @@ void Game_DrawCircle(SDL_Renderer *renderer, glm::vec2 center, int radius, glm::
         x++;
     }
 }
+
+Game_Object Game_CreateRandomBackgroundPoint(bool withOffset)
+{
+    float y = (float)SDL_rand(m_WindowHeight);
+    if (withOffset)
+    {
+        y += (m_WindowHeight / 2) + Game_CameraOffset.y;
+    }
+    /**
+     * Point ExData
+     * { Parallex, brightness }
+     */
+    Game_Object object(glm::vec2((float)SDL_rand(m_WindowWidth) - m_WindowWidth / 2, y), Game_RandomColor(true));
+    object.exData[0] = SDL_rand(100) / 200.0f;
+    object.exData[1] = SDL_rand(255) / 255.0f;
+    return object;
+}
+
+Game_BarrierBendObject *Game_CreateBarrierBendLine(float y, float speed)
+{
+    static Game_BarrierBendObject objectList[32];
+
+    const COLOR colorList[4] = {COLOR::RED, COLOR::GREEN, COLOR::BLUE, COLOR::YELLOW};
+    int colorIndex = 0;
+    int colorCount = 1;
+    int index = 0;
+
+    float x = -m_WindowWidth / 2;
+    while (x <= m_WindowWidth / 2)
+    {
+        objectList[index] = Game_BarrierBendObject(glm::vec2(x, y), colorList[colorIndex], speed);
+
+        if (++colorCount > 4)
+        {
+            colorCount = 1;
+            if (++colorIndex >= 4)
+            {
+                colorIndex = 0;
+            }
+        }
+
+        x += BARRIER_RADIUS * 4;
+
+        if (++index > 32)
+        {
+            return objectList;
+        }
+    }
+
+    return objectList;
+}

@@ -21,6 +21,7 @@ extern float frame_DeltaTime;
 extern int m_WindowWidth;
 extern int m_WindowHeight;
 extern glm::vec2 Game_CameraOffset;
+extern Ball Game_Ball;
 
 typedef enum
 {
@@ -53,6 +54,7 @@ public:
 class Game_BarrierBendObject : public Game_Object
 {
 public:
+    Game_BarrierBendObject();
     Game_BarrierBendObject(glm::vec2 position, COLOR color, float speed);
     float speed;
     float startX;
