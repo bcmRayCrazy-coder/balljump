@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 if (MSVC)
     add_compile_options(/W4)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-variable)
 endif()
 add_compile_options(-O3)
 
@@ -25,7 +25,7 @@ find_package(SDL3_ttf REQUIRED)
 find_package(glm REQUIRED)
 find_package(fmt REQUIRED)
 
-add_executable(${TARGET} main.cpp version.rc)
+add_executable(${TARGET} src/main.cpp version.rc)
 
 # Compile Define
 # FPS Limit (Comment if not use)
