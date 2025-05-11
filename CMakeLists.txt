@@ -25,7 +25,9 @@ find_package(SDL3_ttf REQUIRED)
 find_package(glm REQUIRED)
 find_package(fmt REQUIRED)
 
-add_executable(${TARGET} src/main.cpp version.rc)
+aux_source_directory(./src SRC_CPP_LIST)
+
+add_executable(${TARGET} ${SRC_CPP_LIST} version.rc)
 
 # Compile Define
 # FPS Limit (Comment if not use)

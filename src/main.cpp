@@ -1,11 +1,4 @@
 #define SDL_MAIN_USE_CALLBACKS 1
-#define BALL_RADIUS 16
-#define BARRIER_RADIUS 8
-#define MAX_NUM_BACKGROUND_POINT 64
-#define Y_INTERVAL_BARRIER_BEND 32
-#define MAX_NUM_BARRIER_BEND 4
-#define Y_INTERVAL_BARRIER_CIRCLE 256
-#define MAX_NUM_BARRIER_CIRCLE 4
 
 #include <math.h>
 #include <fmt/core.h>
@@ -14,46 +7,8 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_image/SDL_image.h>
-
-typedef enum
-{
-    RED = 10,
-    GREEN = 11,
-    BLUE = 12,
-    YELLOW = 13,
-    ANY = 14
-} COLOR;
-
-typedef enum
-{
-    MENU,
-    WAIT,
-    GAME,
-    END
-} GAME_STATE;
-
-typedef struct
-{
-    glm::vec2 position;
-    COLOR color;
-    float exData[4];
-    void (*onFrame)();
-} Game_Object;
-
-typedef struct
-{
-    COLOR color;
-    float y;
-    float yVelocity;
-} Ball;
-
-static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
-static TTF_Font *font = NULL;
-static Uint64 frame_LastFrameTime;
-static float frame_DeltaTime;
-static int m_WindowWidth = 0;
-static int m_WindowHeight = 0;
+#include "define.h"
+#include "utils.h"
 
 // State
 static GAME_STATE Game_State = GAME_STATE::WAIT;
@@ -65,131 +20,12 @@ static TTF_Text *Game_TextHeight = NULL;
 static TTF_Text *Game_TextFPS = NULL;
 static SDL_Texture *Game_HintUpArrowTexture = NULL;
 
-// Gaming Object
-static glm::vec2 Game_CameraOffset = glm::vec2(0, 100);
+// Game Object
 static Ball Game_Ball;
 
-static Game_Object Game_BackgroundPoints[MAX_NUM_BACKGROUND_POINT] = {};
-static Game_Object *Game_BarrierColorBend[MAX_NUM_BARRIER_BEND][32] = {};
-static Game_Object Game_BarrierColorCircle[MAX_NUM_BARRIER_CIRCLE][16] = {};
-
-/**
- * Utils
- */
-
-static void Game_VoidFunction()
-{
-}
-
-static glm::vec3 Game_GetColorV3(COLOR color)
-{
-    switch (color)
-    {
-    case COLOR::RED:
-        return glm::vec3(255, 0, 0);
-        break;
-
-    case COLOR::GREEN:
-        return glm::vec3(0, 255, 0);
-        break;
-
-    case COLOR::BLUE:
-        return glm::vec3(0, 0, 255);
-        break;
-
-    case COLOR::YELLOW:
-        return glm::vec3(255, 255, 0);
-        break;
-
-    default:
-        return glm::vec3(255, 255, 255);
-    }
-}
-
-static COLOR Game_RandomColor(bool hasAny)
-{
-    Sint32 n = SDL_rand(hasAny ? 4 : 3);
-    switch (n)
-    {
-    case 0:
-        return COLOR::RED;
-        break;
-    case 1:
-        return COLOR::GREEN;
-        break;
-    case 2:
-        return COLOR::BLUE;
-        break;
-    case 3:
-        return COLOR::YELLOW;
-        break;
-    case 4:
-        return COLOR::ANY;
-        break;
-
-    default:
-        return COLOR::RED;
-        break;
-    }
-}
-
-static glm::vec2 Game_GetRenderPosition(glm::vec2 position)
-{
-    return glm::vec2(position.x - Game_CameraOffset.x + (m_WindowWidth / 2), (m_WindowHeight / 2) - position.y + Game_CameraOffset.y);
-}
-
-static void Game_SetText(TTF_Text *text, std::string content)
-{
-    TTF_DeleteTextString(text, 0, -1);
-    TTF_AppendTextString(text, content.c_str(), content.length());
-}
-
-static void Game_DrawCross(glm::vec2 center, int length, glm::vec3 color, float alpha)
-{
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha);
-
-    float x = center.x - length;
-    float endX = center.x + length;
-    while (x <= endX)
-    {
-        SDL_RenderPoint(renderer, x, center.y);
-        x++;
-    }
-
-    float y = center.y - length;
-    float endY = center.y + length;
-    while (y <= endY)
-    {
-        SDL_RenderPoint(renderer, center.x, y);
-        y++;
-    }
-}
-
-static void Game_DrawCircle(glm::vec2 center, int radius, glm::vec3 color, float alpha)
-{
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha);
-
-    float x = center.x - radius;
-    float y = center.y - radius;
-    float endX = center.x + radius;
-    float endY = center.y + radius;
-    while (x <= endX)
-    {
-        while (y <= endY)
-        {
-            glm::vec2 pointPosition = glm::vec2(x, y);
-            float distance = glm::distance(center, pointPosition);
-            if (distance <= radius)
-            {
-                SDL_RenderPoint(renderer, x, y);
-            }
-
-            y++;
-        }
-        y = center.y - radius;
-        x++;
-    }
-}
+static Game_Object Game_BackgroundPoints[MAX_NUM_BACKGROUND_POINT];
+static Game_Object Game_BarrierColorBend[MAX_NUM_BARRIER_BEND][32];
+// static Game_Object Game_BarrierColorCircle[MAX_NUM_BARRIER_CIRCLE][16] = {};
 
 /**
  * Create
@@ -202,29 +38,13 @@ static Game_Object Game_CreateRandomBackgroundPoint(bool withOffset = true)
         y += (m_WindowHeight / 2) + Game_CameraOffset.y;
     }
     /**
-     * Point ExData (Alpha Control)
+     * Point ExData
      * { Parallex, brightness }
      */
-    return {
-        glm::vec2((float)SDL_rand(m_WindowWidth) - m_WindowWidth / 2, y),
-        Game_RandomColor(true),
-        {SDL_rand(100) / 200.0f, SDL_rand(255) / 255.0f},
-        Game_VoidFunction};
-}
-
-static Game_Object *Game_CreateBarrierBend(float y, float speed)
-{
-    /**
-     * TODO: Create Bend
-     * Radius: BARRIER_RADIUS
-     * Interval: BALL_RADIUS / 2
-     * exData: { Speed }
-     */
-    float x = -m_WindowWidth / 2;
-    while (x < m_WindowWidth / 2)
-    {
-        x += BALL_RADIUS / 2;
-    }
+    Game_Object object(glm::vec2((float)SDL_rand(m_WindowWidth) - m_WindowWidth / 2, y), Game_RandomColor(true));
+    object.exData[0] = SDL_rand(100) / 200.0f;
+    object.exData[1] = SDL_rand(255) / 255.0f;
+    return object;
 }
 
 /**
@@ -295,7 +115,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     // Init Game
     SDL_GetWindowSize(window, &m_WindowWidth, &m_WindowHeight);
-    SDL_srand((unsigned) time(NULL));
+    SDL_srand((unsigned)time(NULL));
     if (!Game_InitText())
     {
         SDL_Log("Could not load font:\n%s", SDL_GetError());
@@ -305,6 +125,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     Game_InitBackgroundPoints();
     Game_InitTexture();
 
+    SDL_SetRenderLogicalPresentation(renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     SDL_Log("Game start");
 
     std::string _empty_text = std::string("");
@@ -351,11 +172,17 @@ static void Game_LimitFPS()
 
 static void Game_FrameCamera()
 {
+    // Track to ball
     Game_CameraOffset.y = Game_Ball.y + 100;
 }
 
 static void Game_FrameBall()
 {
+    glm::vec2 renderPosition = Game_GetRenderPosition(glm::vec2(0, Game_Ball.y));
+    glm::vec3 ballColor = Game_GetColorV3(Game_Ball.color);
+    Game_DrawCircle(renderer, renderPosition, BALL_RADIUS, ballColor, 255);
+
+    // Update after rendering to avoid shaking
     Game_Ball.y += Game_Ball.yVelocity * frame_DeltaTime;
     if (Game_Ball.yVelocity > 0)
     {
@@ -366,10 +193,6 @@ static void Game_FrameBall()
         }
         Game_UpdateTextHeight();
     }
-
-    glm::vec2 renderPosition = Game_GetRenderPosition(glm::vec2(0, Game_Ball.y));
-    glm::vec3 ballColor = Game_GetColorV3(Game_Ball.color);
-    Game_DrawCircle(renderPosition, BALL_RADIUS, ballColor, 255);
 }
 
 static void Game_FrameBackground()
@@ -382,7 +205,7 @@ static void Game_FrameBackground()
         const glm::vec3 pointColor = Game_GetColorV3(point.color) * glm::vec3(brightness, brightness, brightness);
         const glm::vec2 pointPosition = Game_GetRenderPosition(point.position) + glm::vec2(0, parallexY);
 
-        Game_DrawCross(pointPosition, 2, pointColor, 255);
+        Game_DrawCross(renderer, pointPosition, 2, pointColor, 255);
 
         // Respawm outbound point
         if (pointPosition.y > m_WindowHeight)
